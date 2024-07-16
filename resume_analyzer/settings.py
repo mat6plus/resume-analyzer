@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from decouple import config, Csv
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -10,7 +10,9 @@ SECRET_KEY = config("SECRET_KEY")
 
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")]
+)
 
 
 INSTALLED_APPS = [
@@ -35,6 +37,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "resume_analyzer.urls"
@@ -57,13 +60,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "resume_analyzer.wsgi.application"
 
-DATABASE_PROVIDER = os.environ.get("DATABASE_PROVIDER", "postgresql")
+DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
+
 if DATABASE_PROVIDER == "postgresql":
-    DB_NAME = os.environ.get("DB_NAME", "dccndb")
-    DB_USERNAME = os.environ.get("DB_USERNAME", "dccndbadm")
-    DB_PASSWORD = os.environ.get("DB_PASSWORD", "qwerty")  # just for dev
-    DB_HOST = os.environ.get("DB_HOST", "localhost")
-    DB_PORT = os.environ.get("DB_PORT", "")
+    DB_NAME = config("DB_NAME", default="resume_analyzer_db")
+    DB_USERNAME = config("DB_USER", default="admin")
+    DB_PASSWORD = config("DB_PASSWORD", default="sq9FhMj0)S-Ah.*d7}fi")
+    DB_HOST = config("DB_HOST", default="localhost")
+    DB_PORT = config("DB_PORT", default="5432")
 
     DATABASES = {
         "default": {
@@ -130,9 +134,14 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_LOGOUT_ON_GET = True
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = config("EMAIL_HOST")
+# EMAIL_PORT = config("EMAIL_PORT", cast=int)
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+# EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+
 EMAIL_HOST = config("EMAIL_HOST")
-EMAIL_PORT = config("EMAIL_PORT", cast=int)
-EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+EMAIL_PORT = config("EMAIL_PORT", cast=int)

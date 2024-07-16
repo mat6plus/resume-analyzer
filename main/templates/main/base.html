@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Resume Analyzer{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="bg-gray-100">
+    <header class="bg-blue-600 text-white p-4">
+      <nav class="container mx-auto flex justify-between items-center">
+        <a href="{% url 'home' %}" class="text-2xl font-bold"
+          >Resume Analyzer</a
+        >
+        <ul class="flex space-x-4">
+          {% if user.is_authenticated %}
+          <li>
+            <a href="{% url 'new_analysis' %}" class="hover:underline"
+              >New Analysis</a
+            >
+          </li>
+          <li>
+            <a href="{% url 'user_profile' %}" class="hover:underline"
+              >Profile</a
+            >
+          </li>
+          <li>
+            <a href="{% url 'logout' %}" class="hover:underline">Logout</a>
+          </li>
+          {% else %}
+          <li><a href="{% url 'login' %}" class="hover:underline">Login</a></li>
+          <li>
+            <a href="{% url 'register' %}" class="hover:underline">Register</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </header>
+
+    <main class="container mx-auto mt-8 p-4">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-gray-200 p-4 mt-8">
+      <div class="container mx-auto text-center">
+        &copy; 2024 Resume Analyzer. All rights reserved.
+      </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
