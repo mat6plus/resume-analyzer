@@ -8,6 +8,7 @@ from .models import JobPosting, Resume, Analysis
 from .forms import JobPostingForm, ResumeForm, UserRegisterForm
 from bs4 import BeautifulSoup
 import requests
+import os
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -33,10 +34,9 @@ def register(request):
             return redirect("home")
     else:
         form = UserRegisterForm()
-    return render(request, "register.html", {"form": form})
+    return render(request, "main/register.html", {"form": form})
 
 
-@login_required
 def home(request):
     return render(request, "main/home.html")
 

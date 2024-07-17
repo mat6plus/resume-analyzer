@@ -1,5 +1,5 @@
 # Use an official Python runtime as the base image
-FROM python:3.9
+FROM python:3.12.4-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -20,9 +20,6 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Copy the project code into the container
 COPY . /app/
-
-# Collect static files
-RUN python manage.py collectstatic --noinput
 
 # Run migrations
 RUN python manage.py migrate

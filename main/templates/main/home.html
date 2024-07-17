@@ -1,15 +1,15 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'main/base.html' %} {% block content %}
 <div class="text-center">
   <h1 class="text-4xl font-bold mb-4">Welcome to Resume Analyzer</h1>
   <p class="text-xl mb-8">Optimize your resume for your dream job</p>
   <div class="space-y-4">
     <a
-      href="{% url 'job_posting_input' %}"
+      href="{% url 'main:job_posting_input' %}"
       class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-block"
       >Analyze a Job Posting</a
     >
     <a
-      href="{% url 'user_profile' %}"
+      href="{% url 'main:user_profile' %}"
       class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded inline-block"
       >View Your Profile</a
     >

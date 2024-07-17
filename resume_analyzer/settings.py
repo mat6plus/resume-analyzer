@@ -45,7 +45,7 @@ ROOT_URLCONF = "resume_analyzer.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, "templates")],
+        "DIRS": [os.path.join(BASE_DIR, "main", "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -60,34 +60,41 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "resume_analyzer.wsgi.application"
 
-DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
+# DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
 
-if DATABASE_PROVIDER == "postgresql":
-    DB_NAME = config("DB_NAME", default="resume_analyzer_db")
-    DB_USERNAME = config("DB_USER", default="admin")
-    DB_PASSWORD = config("DB_PASSWORD", default="sq9FhMj0)S-Ah.*d7}fi")
-    DB_HOST = config("DB_HOST", default="localhost")
-    DB_PORT = config("DB_PORT", default="5432")
+# if DATABASE_PROVIDER == "postgresql":
+#     DB_NAME = config("DB_NAME")
+#     DB_USER = config("DB_USER")
+#     DB_PASSWORD = config("DB_PASSWORD")
+#     DB_HOST = config("DB_HOST")
+#     DB_PORT = config("DB_PORT")
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql_psycopg2",
-            "NAME": DB_NAME,
-            "USER": DB_USERNAME,
-            "PASSWORD": DB_PASSWORD,
-            "HOST": DB_HOST,
-            "PORT": DB_PORT,
-        }
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.postgresql_psycopg2",
+#             "NAME": DB_NAME,
+#             "USER": DB_USER,
+#             "PASSWORD": DB_PASSWORD,
+#             "HOST": DB_HOST,
+#             "PORT": DB_PORT,
+#         }
+#     }
+# elif DATABASE_PROVIDER == "sqlite" or DATABASE_PROVIDER == "sqlite3":
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.sqlite3",
+#             "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+#         },
+#     }
+# else:
+#     raise ValueError(f'unsupported DB provider "{DATABASE_PROVIDER}"')
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
     }
-elif DATABASE_PROVIDER == "sqlite" or DATABASE_PROVIDER == "sqlite3":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
-        },
-    }
-else:
-    raise ValueError(f'unsupported DB provider "{DATABASE_PROVIDER}"')
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -104,8 +111,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+# STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+# STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -116,11 +123,15 @@ AUTHENTICATION_BACKENDS = [
 
 SITE_ID = 1
 LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_LOGOUT_ON_GET = True
+
+# Custom Signup Form
+# ACCOUNT_SIGNUP_FORM_CLASS = "main.forms.UserRegisterForm"
 
 EMAIL_HOST = config("EMAIL_HOST")
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
