@@ -61,34 +61,46 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "resume_analyzer.wsgi.application"
 
-DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
 
-if DATABASE_PROVIDER == "postgresql":
-    DB_NAME = config("DB_NAME")
-    DB_USER = config("DB_USER")
-    DB_PASSWORD = config("DB_PASSWORD")
-    DB_HOST = config("DB_HOST")
-    DB_PORT = config("DB_PORT")
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME"),
+        "USER": os.environ.get("DB_USERNAME"),
+        "PASSWORD": os.environ.get("DB_PASSWORD"),
+        "HOST": os.environ.get("DB_HOST"),
+        "PORT": os.environ.get("DB_PORT"),
+    }
+}
 
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql_psycopg2",
-            "NAME": DB_NAME,
-            "USER": DB_USER,
-            "PASSWORD": DB_PASSWORD,
-            "HOST": DB_HOST,
-            "PORT": DB_PORT,
-        }
-    }
-elif DATABASE_PROVIDER == "sqlite" or DATABASE_PROVIDER == "sqlite3":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
-        },
-    }
-else:
-    raise ValueError(f'unsupported DB provider "{DATABASE_PROVIDER}"')
+# DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
+
+# if DATABASE_PROVIDER == "postgresql":
+#     DB_NAME = config("DB_NAME")
+#     DB_USER = config("DB_USER")
+#     DB_PASSWORD = config("DB_PASSWORD")
+#     DB_HOST = config("DB_HOST")
+#     DB_PORT = config("DB_PORT")
+
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.postgresql_psycopg2",
+#             "NAME": DB_NAME,
+#             "USER": DB_USER,
+#             "PASSWORD": DB_PASSWORD,
+#             "HOST": DB_HOST,
+#             "PORT": DB_PORT,
+#         }
+#     }
+# elif DATABASE_PROVIDER == "sqlite" or DATABASE_PROVIDER == "sqlite3":
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.sqlite3",
+#             "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+#         },
+#     }
+# else:
+#     raise ValueError(f'unsupported DB provider "{DATABASE_PROVIDER}"')
 
 AUTH_PASSWORD_VALIDATORS = [
     {
