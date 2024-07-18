@@ -8,28 +8,14 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
-  migrate:
+  app:
     build: .
-    command: python manage.py migrate
+    command: sh -c "./wait-for-db.sh db 5432 python manage.py migrate && gunicorn --bind 0.0.0.0:8000 resume_analyzer.wsgi:application"
     depends_on:
       - db
     environment:
-      - DATABASE_PROVIDER=${DATABASE_PROVIDER}
-      - DB_NAME=${DB_NAME}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=db
-      - DB_PORT=5432
-
-  app:
-    build: .
-    command: sh -c "./wait-for-db.sh db:5432 -- gunicorn --bind 0.0.0.0:8000 resume_analyzer.wsgi:application"
-    depends_on:
-      - migrate
-    environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
-      - DATABASE_PROVIDER=${DATABASE_PROVIDER}
       - DB_NAME=${DB_NAME}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}

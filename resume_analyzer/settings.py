@@ -8,13 +8,11 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config("SECRET_KEY")
-
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")]
 )
-
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -61,7 +59,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "resume_analyzer.wsgi.application"
 
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -72,35 +69,6 @@ DATABASES = {
         "PORT": os.environ.get("DB_PORT"),
     }
 }
-
-# DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
-
-# if DATABASE_PROVIDER == "postgresql":
-#     DB_NAME = config("DB_NAME")
-#     DB_USER = config("DB_USER")
-#     DB_PASSWORD = config("DB_PASSWORD")
-#     DB_HOST = config("DB_HOST")
-#     DB_PORT = config("DB_PORT")
-
-#     DATABASES = {
-#         "default": {
-#             "ENGINE": "django.db.backends.postgresql_psycopg2",
-#             "NAME": DB_NAME,
-#             "USER": DB_USER,
-#             "PASSWORD": DB_PASSWORD,
-#             "HOST": DB_HOST,
-#             "PORT": DB_PORT,
-#         }
-#     }
-# elif DATABASE_PROVIDER == "sqlite" or DATABASE_PROVIDER == "sqlite3":
-#     DATABASES = {
-#         "default": {
-#             "ENGINE": "django.db.backends.sqlite3",
-#             "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
-#         },
-#     }
-# else:
-#     raise ValueError(f'unsupported DB provider "{DATABASE_PROVIDER}"')
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -136,22 +104,15 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_LOGOUT_ON_GET = True
 
-# Custom Signup Form
-# ACCOUNT_SIGNUP_FORM_CLASS = "main.forms.UserRegisterForm"
-
 EMAIL_HOST = config("EMAIL_HOST")
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = config("EMAIL_PORT", cast=int)
 
-
 NLTK_DATA = os.path.join(BASE_DIR, "nltk_data")
 
-
-# Add the custom form renderer:
 FORM_RENDERER = "main.forms.TailwindFormRenderer"
 
-# Add the custom Allauth forms:
 ACCOUNT_FORMS = {
     "login": "main.allauth_forms.CustomLoginForm",
     "signup": "main.allauth_forms.CustomSignupForm",
