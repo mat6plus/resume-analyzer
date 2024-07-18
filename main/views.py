@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from .models import JobPosting, Resume, Analysis
 from .forms import JobPostingForm, ResumeForm, UserRegisterForm
 from bs4 import BeautifulSoup
+from django.conf import settings
 import requests
 import os
 import nltk
@@ -18,6 +19,10 @@ import PyPDF2
 import docx2txt
 import logging
 import threading
+import json
+
+
+nltk.data.path.append(settings.NLTK_DATA)
 
 nltk.download("punkt")
 nltk.download("stopwords")
@@ -39,6 +44,20 @@ def register(request):
 
 def home(request):
     return render(request, "main/home.html")
+
+
+@login_required
+@require_POST
+def update_profile(request):
+    data = json.loads(request.body)
+    user = request.user
+    user.name = data.get("name", user.name)
+    user.email = data.get("email", user.email)
+    profile = user.profile
+    profile.bio = data.get("bio", profile.bio)
+    user.save()
+    profile.save()
+    return JsonResponse({"name": user.name, "email": user.email, "bio": profile.bio})
 
 
 @login_required

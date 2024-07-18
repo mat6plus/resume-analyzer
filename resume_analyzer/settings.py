@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from decouple import config
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -60,41 +61,34 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "resume_analyzer.wsgi.application"
 
-# DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
+DATABASE_PROVIDER = config("DATABASE_PROVIDER", default="postgresql")
 
-# if DATABASE_PROVIDER == "postgresql":
-#     DB_NAME = config("DB_NAME")
-#     DB_USER = config("DB_USER")
-#     DB_PASSWORD = config("DB_PASSWORD")
-#     DB_HOST = config("DB_HOST")
-#     DB_PORT = config("DB_PORT")
+if DATABASE_PROVIDER == "postgresql":
+    DB_NAME = config("DB_NAME")
+    DB_USER = config("DB_USER")
+    DB_PASSWORD = config("DB_PASSWORD")
+    DB_HOST = config("DB_HOST")
+    DB_PORT = config("DB_PORT")
 
-#     DATABASES = {
-#         "default": {
-#             "ENGINE": "django.db.backends.postgresql_psycopg2",
-#             "NAME": DB_NAME,
-#             "USER": DB_USER,
-#             "PASSWORD": DB_PASSWORD,
-#             "HOST": DB_HOST,
-#             "PORT": DB_PORT,
-#         }
-#     }
-# elif DATABASE_PROVIDER == "sqlite" or DATABASE_PROVIDER == "sqlite3":
-#     DATABASES = {
-#         "default": {
-#             "ENGINE": "django.db.backends.sqlite3",
-#             "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
-#         },
-#     }
-# else:
-#     raise ValueError(f'unsupported DB provider "{DATABASE_PROVIDER}"')
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql_psycopg2",
+            "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+        }
     }
-}
+elif DATABASE_PROVIDER == "sqlite" or DATABASE_PROVIDER == "sqlite3":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        },
+    }
+else:
+    raise ValueError(f'unsupported DB provider "{DATABASE_PROVIDER}"')
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -111,8 +105,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-# STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-# STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -137,3 +131,20 @@ EMAIL_HOST = config("EMAIL_HOST")
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = config("EMAIL_PORT", cast=int)
+
+
+NLTK_DATA = os.path.join(BASE_DIR, "nltk_data")
+
+
+# Add the custom form renderer:
+FORM_RENDERER = "main.forms.TailwindFormRenderer"
+
+# Add the custom Allauth forms:
+ACCOUNT_FORMS = {
+    "login": "main.allauth_forms.CustomLoginForm",
+    "signup": "main.allauth_forms.CustomSignupForm",
+    "reset_password": "main.allauth_forms.CustomResetPasswordForm",
+    "reset_password_from_key": "main.allauth_forms.CustomResetPasswordKeyForm",
+    "change_password": "main.allauth_forms.CustomChangePasswordForm",
+    "set_password": "main.allauth_forms.CustomSetPasswordForm",
+}

@@ -1,0 +1,29 @@
+{% extends 'account/base_account.html' %} {% load i18n %} {% load account
+socialaccount %} {% block account_title %}{% trans "Sign In" %}{% endblock %} {%
+block account_content %}
+<form class="login" method="POST" action="{% url 'account_login' %}">
+  {% csrf_token %} {{ form.as_p }} {% if redirect_field_value %}
+  <input
+    type="hidden"
+    name="{{ redirect_field_name }}"
+    value="{{ redirect_field_value }}"
+  />
+  {% endif %}
+  <button
+    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mt-4"
+    type="submit"
+  >
+    {% trans "Sign In" %}
+  </button>
+</form>
+
+<div class="mt-4">
+  <p>
+    {% blocktrans %}If you have not created an account yet, then please
+    <a href="{{ signup_url }}" class="text-blue-500 hover:text-blue-600"
+      >sign up</a
+    >
+    first.{% endblocktrans %}
+  </p>
+</div>
+{% endblock %}
