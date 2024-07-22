@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
+
 COPY requirements.txt /app/
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
@@ -25,8 +26,21 @@ COPY . /app/
 COPY wait-for-db.sh /app/wait-for-db.sh
 RUN chmod +x /app/wait-for-db.sh
 
+# Copy the entrypoint script and make it executable
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+# Create a non-root user and switch to it
+RUN adduser --disabled-password --gecos '' appuser
+USER appuser
+
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Start the application using the wait-for-it script
-CMD ["./wait-for-db.sh", "db:5432", "--", "gunicorn", "--bind", "0.0.0.0:8000", "resume_analyzer.wsgi:application"]
+# The entrypoint script will be executed in docker-compose
+CMD ["gunicorn", "--bind", "127.0.0.1:8000", "resume_analyzer.wsgi:application"]
+
+

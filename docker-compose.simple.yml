@@ -2,26 +2,19 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USERNAME}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=yourdatabasename
+      - POSTGRES_USER=yourusername
+      - POSTGRES_PASSWORD=yourpassword
     volumes:
       - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: sh -c "./wait-for-db.sh db 5432 ./entrypoint.sh"
+    build: .
+    ports:
+      - "8000:8000"
+    command: python manage.py runserver 0.0.0.0:8000
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=0
@@ -34,9 +27,6 @@ services:
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
       - EMAIL_PORT=${EMAIL_PORT}
-    ports:
-      - "8000:8000"
-    restart: unless-stopped
 
 volumes:
   db-data:

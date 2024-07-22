@@ -11,7 +11,9 @@ TRIES=0
 MAX_TRIES=5
 SLEEP_TIME=12
 
-until PGPASSWORD="${DB_PASSWORD}" psql -h "${HOST}" -U "${DB_USERNAME}" -d "${DB_NAME}" -c '\q'; do
+>&2 echo "Waiting for Postgres to become available..."
+
+until PGPASSWORD="${DB_PASSWORD}" psql -h "${HOST}" -p "${PORT}" -U "${DB_USERNAME}" -d "${DB_NAME}" -c '\q'; do
   >&2 echo "Postgres is unavailable - sleeping"
   sleep ${SLEEP_TIME}
   ((TRIES++))
@@ -21,5 +23,5 @@ until PGPASSWORD="${DB_PASSWORD}" psql -h "${HOST}" -U "${DB_USERNAME}" -d "${DB
   fi
 done
 
->&2 echo "Postgres is up - executing command"
+>&2 echo "Postgres is up - executing command . . . ."
 exec $CMD
