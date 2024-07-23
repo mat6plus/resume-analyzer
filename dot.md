@@ -116,3 +116,37 @@ ENTRYPOINT ["./wait-for-db.sh"]
 
 # Set the default command to run migrations and then start the app
 CMD ["./wait-for-db.sh", "db", "5432", "--", "gunicorn", "--bind", "0.0.0.0:8000", "resume_analyzer.wsgi:application"]
+
+
+
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream django {
+        server app:8000;
+    }
+
+    server {
+        listen 80;
+        server_name localhost;
+
+        location / {
+            proxy_pass http://django;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /static/ {
+            alias /app/static/;
+        }
+
+        location /media/ {
+            alias /app/media/;
+        }
+    }
+}

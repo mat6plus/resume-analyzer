@@ -30,8 +30,8 @@ RUN chmod +x /app/wait-for-db.sh
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Make entrypoint script executable
-RUN chmod +x /app/entrypoint.sh
+# Make the entrypoint script the default command
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Create a non-root user and switch to it
 RUN adduser --disabled-password --gecos '' appuser
@@ -41,6 +41,6 @@ USER appuser
 EXPOSE 8000
 
 # The entrypoint script will be executed in docker-compose
-CMD ["gunicorn", "--bind", "127.0.0.1:8000", "resume_analyzer.wsgi:application"]
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "resume_analyzer.wsgi:application"]
 
 

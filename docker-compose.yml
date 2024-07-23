@@ -13,12 +13,14 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - backend
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "./wait-for-db.sh db 5432 ./entrypoint.sh"
+    command: sh -c "./wait-for-db.sh db 5432 && gunicorn -c gunicorn.conf.py resume_analyzer.wsgi:application"
     depends_on:
       db:
         condition: service_healthy
@@ -34,9 +36,34 @@ services:
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
       - EMAIL_PORT=${EMAIL_PORT}
-    ports:
-      - "8000:8000"
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
     restart: unless-stopped
+    networks:
+      - backend
+      - frontend
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_volume:/app/static
+      - media_volume:/app/media
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - frontend
 
 volumes:
   db-data:
+  static_volume:
+  media_volume:
+
+networks:
+  backend:
+  frontend:
