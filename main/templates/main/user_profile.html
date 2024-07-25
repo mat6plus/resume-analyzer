@@ -1,60 +1,31 @@
-{% extends 'base.html' %} {% block title %}User Profile{% endblock %} {% block
-content %}
-<div
-  class="max-w-2xl mx-auto"
-  x-data="{ editing: false, user: {} }"
-  x-init="user = JSON.parse('{{ user_data|escapejs }}')"
->
+{% extends 'main/base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto" x-data="{ editing: false, user: {} }" x-init="user = JSON.parse('{{ user_data|escapejs }}')">
   <h1 class="text-3xl font-bold mb-6">User Profile</h1>
 
   <div class="bg-white shadow-md rounded-lg p-6">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-2xl font-semibold">Personal Information</h2>
-      <button
-        @click="editing = !editing"
-        x-text="editing ? 'Cancel' : 'Edit'"
-        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-      ></button>
+      <button @click="editing = !editing" x-text="editing ? 'Cancel' : 'Edit'" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"></button>
     </div>
 
     <form x-show="editing" @submit.prevent="saveProfile()">
       <div class="mb-4">
-        <label for="name" class="block text-gray-700 font-bold mb-2"
-          >Name</label
-        >
-        <input
-          type="text"
-          id="name"
-          x-model="user.name"
-          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <label for="name" class="block text-gray-700 font-bold mb-2">Name</label>
+        <input type="text" id="name" x-model="user.name" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div class="mb-4">
-        <label for="email" class="block text-gray-700 font-bold mb-2"
-          >Email</label
-        >
-        <input
-          type="email"
-          id="email"
-          x-model="user.email"
-          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <label for="email" class="block text-gray-700 font-bold mb-2">Email</label>
+        <input type="email" id="email" x-model="user.email" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div class="mb-4">
         <label for="bio" class="block text-gray-700 font-bold mb-2">Bio</label>
-        <textarea
-          id="bio"
-          x-model="user.bio"
-          class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          rows="4"
-        ></textarea>
+        <textarea id="bio" x-model="user.bio" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="4"></textarea>
       </div>
-      <button
-        type="submit"
-        class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-      >
-        Save Changes
-      </button>
+      <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">Save Changes</button>
     </form>
 
     <div x-show="!editing">
@@ -67,7 +38,8 @@ content %}
         <span x-text="user.email"></span>
       </p>
       <p class="mb-2">
-        <span class="font-semibold">Bio:</span> <span x-text="user.bio"></span>
+        <span class="font-semibold">Bio:</span>
+        <span x-text="user.bio"></span>
       </p>
     </div>
   </div>
@@ -75,17 +47,13 @@ content %}
   <div class="mt-8 bg-white shadow-md rounded-lg p-6">
     <h2 class="text-2xl font-semibold mb-4">Resume Analysis History</h2>
     <div class="space-y-4">
-      {% for analysis in analysis_history %}
+      {% for analysis in analyses %}
       <div class="border-b pb-4">
         <p class="font-semibold">Job Title: {{ analysis.job_title }}</p>
         <p>Company: {{ analysis.company }}</p>
         <p>Match Percentage: {{ analysis.match_percentage }}%</p>
         <p>Date: {{ analysis.date }}</p>
-        <a
-          href="{% url 'analysis_result' analysis.id %}"
-          class="text-blue-500 hover:text-blue-600"
-          >View Details</a
-        >
+        <a href="{% url 'analysis_result' analysis.id %}" class="text-blue-500 hover:text-blue-600">View Details</a>
       </div>
       {% empty %}
       <p>No analysis history available.</p>
@@ -93,7 +61,10 @@ content %}
     </div>
   </div>
 </div>
-{% endblock %} {% block extra_js %}
+{% endblock %}
+
+{% block extra_js %}
+{% url "update_profile" as update_profile_url %}
 <script>
   function saveProfile() {
     // Get the CSRF token from the cookie
@@ -114,7 +85,7 @@ content %}
     const csrftoken = getCookie("csrftoken");
 
     // Make an AJAX request to save the profile data
-    fetch('{% url "update_profile" %}', {
+    fetch('{{ update_profile_url }}', {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -122,25 +93,25 @@ content %}
       },
       body: JSON.stringify(this.user),
     })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Profile saved successfully:", data);
-        // Update the user data with the response from the server
-        this.user = data;
-        // Exit edit mode
-        this.editing = false;
-        // Show a success message
-        alert("Profile updated successfully!");
-      })
-      .catch((error) => {
-        console.error("Error saving profile:", error);
-        alert("There was an error saving your profile. Please try again.");
-      });
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Profile saved successfully:", data);
+      // Update the user data with the response from the server
+      this.user = data;
+      // Exit edit mode
+      this.editing = false;
+      // Show a success message
+      alert("Profile updated successfully!");
+    })
+    .catch((error) => {
+      console.error("Error saving profile:", error);
+      alert("There was an error saving your profile. Please try again.");
+    });
   }
 </script>
 {% endblock %}

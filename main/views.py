@@ -246,3 +246,9 @@ def get_analysis_results(request, job_posting_id, resume_id):
 @login_required
 def new_analysis(request):
     return redirect("job_posting_input")
+
+def email_confirmation_sent_view(request):
+    return render(request, 'account/email_confirmation_sent.html', {
+        'signup_url': '/register/',
+        'login_url': '/login/',
+    })

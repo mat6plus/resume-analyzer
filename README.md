@@ -1,5 +1,9 @@
 # Resume Analyzer
 
+# docker build -t yourdockerhubusername/your-app-name:latest .
+# docker push yourdockerhubusername/your-app-name:latest
+
+
 This is a free and a simple open-source tool to analyze your resume against a Job position.
 If you find this useful don't forget to drop a like. Thanks
 

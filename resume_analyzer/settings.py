@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', '0.0.0.0', '172.17.0.1']
 
 
 # ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
@@ -55,7 +55,8 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [
             os.path.join(BASE_DIR, "main", "templates"),
-            os.path.join(django.__path__[0], 'forms', 'templates'),  # Add this line
+            os.path.join(django.__path__[0], 'forms', 'templates'),
+            os.path.join(BASE_DIR, "account", "templates"), 
         ],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -69,23 +70,7 @@ TEMPLATES = [
     },
 ]
 
-# TEMPLATES = [
-#     {
-#         "BACKEND": "django.template.backends.django.DjangoTemplates",
-#         "DIRS": [os.path.join(BASE_DIR, "main", "templates")],
-#         "APP_DIRS": True,
-#         "OPTIONS": {
-#             "context_processors": [
-#                 "django.template.context_processors.debug",
-#                 "django.template.context_processors.request",
-#                 "django.contrib.auth.context_processors.auth",
-#                 "django.contrib.messages.context_processors.messages",
-#             ],
-#         },
-#     },
-# ]
-
-TEMPLATES[0]['OPTIONS']['debug'] = True
+# TEMPLATES[0]['OPTIONS']['debug'] = True
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -102,13 +87,13 @@ DATABASES = {
 }
 
 # DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": os.environ.get("DB_NAME"),
-#         "USER": os.environ.get("DB_USERNAME"),
-#         "PASSWORD": os.environ.get("DB_PASSWORD"),
-#         "HOST": os.environ.get("DB_HOST", "db"),
-#         "PORT": os.environ.get("DB_PORT", "5432"),
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config("DB_NAME"),
+#         'USER': config("DB_USERNAME"),
+#         'PASSWORD': config("DB_PASSWORD"),
+#         'HOST': config("DB_HOST"),
+#         'PORT': config("DB_PORT"),
 #     }
 # }
 
@@ -133,23 +118,18 @@ STATIC_ROOT = "/main/static"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = "/main/media"
 
-
-# STATIC_URL = "static/"
-# STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
-# STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-
 
 SITE_ID = 1
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config("EMAIL_HOST")
+EMAIL_PORT = config("EMAIL_PORT", cast=int)
+EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
-EMAIL_PORT = config("EMAIL_PORT", cast=int)
 
 NLTK_DATA = os.path.join(BASE_DIR, "nltk_data")
 
@@ -170,3 +150,6 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_LOGOUT_ON_GET = True
+
+
+

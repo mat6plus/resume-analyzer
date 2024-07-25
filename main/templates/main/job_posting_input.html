@@ -1,11 +1,11 @@
-{% extends 'base.html' %}
+{% extends 'main/base.html' %}
 
 {% block title %}Enter Job Posting{% endblock %}
 
 {% block content %}
 <div class="max-w-md mx-auto" x-data="{ crawling: false, progress: 0 }">
     <h1 class="text-3xl font-bold mb-4">Enter Job Posting Details</h1>
-    <form hx-post="{% url 'job_posting_input' %}" hx-trigger="submit" hx-target="#form-errors" @submit="crawling = true">
+    <form hx-post="{% url 'main:job_posting_input' %}" hx-trigger="submit" hx-target="#form-errors" @submit="crawling = true">
         {% csrf_token %}
         <div class="mb-4">
             <label for="{{ form.url.id_for_label }}" class="block text-sm font-medium text-gray-700">Job Posting URL</label>
@@ -43,14 +43,14 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
 
 function updateProgress() {
     if (Alpine.store('crawling')) {
-        htmx.ajax('GET', "{% url 'crawl_progress' 0 %}".replace('0', '{{ job_posting.id }}'), '#progress')
+        htmx.ajax('GET', "{% url 'main:crawl_progress' 0 %}".replace('0', '{{ job_posting.id }}'), '#progress')
             .then(function(xhr) {
                 var response = JSON.parse(xhr.responseText);
                 Alpine.store('progress', response.progress);
                 if (response.progress < 100) {
                     setTimeout(updateProgress, 1000);
                 } else {
-                    window.location.href = "{% url 'resume_upload' 0 %}".replace('0', '{{ job_posting.id }}');
+                    window.location.href = "{% url 'main:resume_upload' 0 %}".replace('0', '{{ job_posting.id }}');
                 }
             });
     }

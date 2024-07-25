@@ -1,0 +1,24 @@
+{% extends 'account/base_account.html' %}
+{% load i18n %}
+
+{% block account_title %}{% trans "E-mail Confirmation Sent" %}{% endblock %}
+
+{% block account_content %}
+  <p>
+    {% blocktrans %}We have sent an email to you for verification. Follow the link provided to finalize the signup process. If you do not see the verification email in your main inbox, check your spam folder. Please contact us if you do not receive the verification email within a few minutes.{% endblocktrans %}
+  </p>
+  <p>
+    {% blocktrans %}If you have not created an account yet, then please
+    <a href="{{ signup_url }}" class="text-blue-500 hover:text-blue-600">
+      sign up
+    </a>
+    first.{% endblocktrans %}
+  </p>
+  <p>
+    {% blocktrans %}If you have already created an account, then please
+    <a href="{{ login_url }}" class="text-blue-500 hover:text-blue-600">
+      sign in
+    </a>
+    .{% endblocktrans %}
+  </p>
+{% endblock %}

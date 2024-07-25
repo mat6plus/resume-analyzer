@@ -16,12 +16,13 @@ urlpatterns = [
         name="analysis",
     ),
     path("user_profile/", views.user_profile, name="user_profile"),
+    path("update-profile/", views.update_profile, name="update_profile"),
     path(
         "crawl_progress/<int:job_posting_id>/",
         views.crawl_progress,
         name="crawl_progress",
     ),
-    path("update-profile/", views.update_profile, name="update_profile"),
+    path('email-confirmation-sent/', views.email_confirmation_sent_view, name='email_confirmation_sent'),
     path(
         "analysis_progress/<int:job_posting_id>/<int:resume_id>/",
         views.analysis_progress,
