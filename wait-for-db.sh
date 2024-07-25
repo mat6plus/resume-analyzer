@@ -1,27 +1,16 @@
-#!/bin/bash
+#!/bin/sh
+# wait-for-db.sh
 
-set -euo pipefail
+set -e
 
-HOST="${1}"
-PORT="${2}"
-shift 2
-CMD="$@"
+host="$1"
+shift
+cmd="$@"
 
-TRIES=0
-MAX_TRIES=5
-SLEEP_TIME=12
-
->&2 echo "Waiting for Postgres to become available..."
-
-until PGPASSWORD="${DB_PASSWORD}" psql -h "${HOST}" -p "${PORT}" -U "${DB_USERNAME}" -d "${DB_NAME}" -c '\q'; do
+until PGPASSWORD=$DB_PASSWORD psql -h "$host" -U "$DB_USER" -d "$DB_NAME" -c '\q'; do
   >&2 echo "Postgres is unavailable - sleeping"
-  sleep ${SLEEP_TIME}
-  ((TRIES++))
-  if [ ${TRIES} -ge ${MAX_TRIES} ]; then
-    >&2 echo "Error: Postgres is not available after ${MAX_TRIES} tries. Check your database connection."
-    exit 1
-  fi
+  sleep 1
 done
 
->&2 echo "Postgres is up - executing command . . . ."
-exec $CMD
+>&2 echo "Postgres is up - executing command"
+exec $cmd

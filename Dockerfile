@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-
 COPY requirements.txt /app/
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
@@ -30,17 +29,24 @@ RUN chmod +x /app/wait-for-db.sh
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Make the entrypoint script the default command
-ENTRYPOINT ["/app/entrypoint.sh"]
-
 # Create a non-root user and switch to it
 RUN adduser --disabled-password --gecos '' appuser
+RUN mkdir -p /main
+
+# Change ownership of the directory to appuser
+RUN chown -R appuser:appuser /main
+RUN chown -R appuser:appuser /app
 USER appuser
+
+# # Create a directory for static files and change ownership to appuser
+# RUN mkdir -p /main
+# RUN chown -R appuser:appuser /main
 
 # Expose the port the app runs on
 EXPOSE 8000
 
-# The entrypoint script will be executed in docker-compose
+# Set the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Command to run the application
 CMD ["gunicorn", "-c", "gunicorn.conf.py", "resume_analyzer.wsgi:application"]
-
-

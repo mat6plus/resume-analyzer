@@ -2,19 +2,31 @@
 
 set -e
 
-# Wait for the database
-echo "Waiting for database..."
-while ! PGPASSWORD=$DB_PASSWORD psql -h "db" -U "$DB_USERNAME" -d "$DB_NAME" -c '\q'; do
-  echo "Database is unavailable - sleeping"
-  sleep 1
-done
-
-echo "Database is up - executing command"
-
-# Apply database migrations
 echo "Applying database migrations..."
-python manage.py migrate
+python manage.py migrate --noinput
 
-# Start Gunicorn
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 echo "Starting Gunicorn..."
-gunicorn --bind 127.0.0.1:8000 resume_analyzer.wsgi:application
+gunicorn -c gunicorn.conf.py resume_analyzer.wsgi:application
+
+
+
+# set -e
+
+# # Wait for the database to be ready
+# echo "Waiting for database..."
+# /app/wait-for-db.sh db "$@"
+
+# # Apply database migrations
+# echo "Applying database migrations..."
+# python manage.py migrate
+
+# # Collect static files
+# echo "Collecting static files..."
+# python manage.py collectstatic --noinput
+
+# # Exit successfully
+# echo "Setup complete. Gunicorn will now start..."
+# exec "$@"

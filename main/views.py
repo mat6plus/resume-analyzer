@@ -39,7 +39,7 @@ def register(request):
             return redirect("home")
     else:
         form = UserRegisterForm()
-    return render(request, "main/register.html", {"form": form})
+    return render(request, "main/signup.html", {"form": form})
 
 
 def home(request):

@@ -1,32 +1,60 @@
-{% extends 'account/base_account.html' %} {% load i18n %} {% block account_title
-%}{% trans "Sign Up" %}{% endblock %} {% block account_content %}
-<form
-  class="signup"
-  id="signup_form"
-  method="post"
-  action="{% url 'account_signup' %}"
->
-  {% csrf_token %} {{ form.as_p }} {% if redirect_field_value %}
-  <input
-    type="hidden"
-    name="{{ redirect_field_name }}"
-    value="{{ redirect_field_value }}"
-  />
-  {% endif %}
-  <button
-    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded mt-4"
-    type="submit"
+{% extends 'account/base_account.html' %} 
+{% load i18n %} 
+{% block account_title %}{% trans "Sign Up" %}{% endblock %} 
+{% block account_content %}
+  <form
+    class="max-w-md mx-auto p-4 bg-white shadow-md rounded"
+    id="signup_form"
+    method="post"
+    action="{% url 'account_signup' %}"
   >
-    {% trans "Sign Up" %}
-  </button>
-</form>
+    {% csrf_token %}
+    {{ form.email.label_tag }}
+    {{ form.email }}
+    <p class="text-xs text-gray-600">{{ form.email.help_text }}</p>
 
-<div class="mt-4">
-  <p>
-    {% blocktrans %}Already have an account? Then please
-    <a href="{{ login_url }}" class="text-blue-500 hover:text-blue-600"
-      >sign in</a
-    >.{% endblocktrans %}
-  </p>
-</div>
+    {{ form.password1.label_tag }}
+    {{ form.password1 }}
+    <p class="text-sm text-gray-600">{{ form.password1.help_text }}</p>  <!-- changed text size -->
+    <ul class="list-none mb-4">
+      <li class="text-sm text-gray-600">{{ form.password1.errors|join:", " }}</li>
+      {% for error in form.password1.errors %}
+        <li class="text-sm text-red-600">{{ error }}</li>
+      {% endfor %}
+    </ul>
+
+    {{ form.password2.label_tag }}
+    {{ form.password2 }}
+    <p class="text-sm text-gray-600">{{ form.password2.help_text }}</p>
+    <ul class="list-none mb-4">
+      <li class="text-sm text-gray-600">{{ form.password2.errors|join:", " }}</li>
+      {% for error in form.password2.errors %}
+        <li class="text-sm text-red-600">{{ error }}</li>
+      {% endfor %}
+    </ul>
+
+    {% if redirect_field_value %}
+      <input
+        type="hidden"
+        name="{{ redirect_field_name }}"
+        value="{{ redirect_field_value }}"
+      />
+    {% endif %}
+    <button
+      class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+      type="submit"
+    >
+      {% trans "Sign Up" %}
+    </button>
+  </form>
+
+  <div class="mt-4">
+    <p>
+      {% blocktrans %}Already have an account? Then please
+      <a href="{{ login_url }}" class="text-blue-500 hover:text-blue-600">
+        sign in
+      </a>
+     .{% endblocktrans %}
+    </p>
+  </div>
 {% endblock %}

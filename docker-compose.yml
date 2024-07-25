@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "./wait-for-db.sh db 5432 && gunicorn -c gunicorn.conf.py resume_analyzer.wsgi:application"
+    command: sh -c "./wait-for-db.sh db 5432 && ./entrypoint.sh"
     depends_on:
       db:
         condition: service_healthy

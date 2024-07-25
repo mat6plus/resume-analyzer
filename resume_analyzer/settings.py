@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import django
 from decouple import config
 from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
@@ -11,14 +12,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = ['127.0.0.1']
 
-if not ALLOWED_HOSTS and not DEBUG:
-    raise ImproperlyConfigured("ALLOWED_HOSTS environment variable is not set")
 
-# ALLOWED_HOSTS = config(
-#     "ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")]
-# )
+# ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+
+# if not ALLOWED_HOSTS and not DEBUG:
+#     raise ImproperlyConfigured("ALLOWED_HOSTS environment variable is not set")
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -47,10 +48,15 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "resume_analyzer.urls"
 
+
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, "main", "templates")],
+        "DIRS": [
+            os.path.join(BASE_DIR, "main", "templates"),
+            os.path.join(django.__path__[0], 'forms', 'templates'),  # Add this line
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -63,18 +69,48 @@ TEMPLATES = [
     },
 ]
 
+# TEMPLATES = [
+#     {
+#         "BACKEND": "django.template.backends.django.DjangoTemplates",
+#         "DIRS": [os.path.join(BASE_DIR, "main", "templates")],
+#         "APP_DIRS": True,
+#         "OPTIONS": {
+#             "context_processors": [
+#                 "django.template.context_processors.debug",
+#                 "django.template.context_processors.request",
+#                 "django.contrib.auth.context_processors.auth",
+#                 "django.contrib.messages.context_processors.messages",
+#             ],
+#         },
+#     },
+# ]
+
+TEMPLATES[0]['OPTIONS']['debug'] = True
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 WSGI_APPLICATION = "resume_analyzer.wsgi.application"
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME"),
-        "USER": os.environ.get("DB_USERNAME"),
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST", "db"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": os.environ.get("DB_NAME"),
+#         "USER": os.environ.get("DB_USERNAME"),
+#         "PASSWORD": os.environ.get("DB_PASSWORD"),
+#         "HOST": os.environ.get("DB_HOST", "db"),
+#         "PORT": os.environ.get("DB_PORT", "5432"),
+#     }
+# }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -104,19 +140,11 @@ MEDIA_ROOT = "/main/media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
-]
+
 
 SITE_ID = 1
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_LOGOUT_ON_GET = True
 
 EMAIL_HOST = config("EMAIL_HOST")
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
@@ -135,3 +163,10 @@ ACCOUNT_FORMS = {
     "change_password": "main.allauth_forms.CustomChangePasswordForm",
     "set_password": "main.allauth_forms.CustomSetPasswordForm",
 }
+
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_LOGOUT_ON_GET = True

@@ -12,17 +12,23 @@ from .forms import TailwindTextInput, TailwindEmailInput, TailwindPasswordInput
 class CustomLoginForm(LoginForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["login"].widget = TailwindEmailInput()
-        self.fields["password"].widget = TailwindPasswordInput()
+        if 'login' in self.fields:
+            self.fields["login"].widget = TailwindEmailInput()
+        if 'password' in self.fields:
+            self.fields["password"].widget = TailwindPasswordInput()
 
 
 class CustomSignupForm(SignupForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].widget = TailwindTextInput()
-        self.fields["email"].widget = TailwindEmailInput()
-        self.fields["password1"].widget = TailwindPasswordInput()
-        self.fields["password2"].widget = TailwindPasswordInput()
+        if 'username' in self.fields:
+            self.fields["username"].widget = TailwindTextInput()
+        if 'email' in self.fields:
+            self.fields["email"].widget = TailwindEmailInput()
+        if 'password1' in self.fields:
+            self.fields["password1"].widget = TailwindPasswordInput()
+        if 'password2' in self.fields:
+            self.fields["password2"].widget = TailwindPasswordInput()
 
 
 class CustomResetPasswordForm(ResetPasswordForm):
