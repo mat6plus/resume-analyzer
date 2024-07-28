@@ -15,6 +15,11 @@ urlpatterns = [
         views.analysis,
         name="analysis",
     ),
+    path(
+        "analysis_results/<int:job_posting_id>/<int:resume_id>/",
+        views.get_analysis_results,
+        name="analysis_results",
+    ),
     path("user_profile/", views.user_profile, name="user_profile"),
     path("update-profile/", views.update_profile, name="update_profile"),
     path(
@@ -22,16 +27,21 @@ urlpatterns = [
         views.crawl_progress,
         name="crawl_progress",
     ),
+    path('analysis_results/<int:job_posting_id>/<int:resume_id>/', views.get_analysis_results, name='analysis_results'),
     path('email-confirmation-sent/', views.email_confirmation_sent_view, name='email_confirmation_sent'),
     path(
-        "analysis_progress/<int:job_posting_id>/<int:resume_id>/",
-        views.analysis_progress,
-        name="analysis_progress",
+        "get_analysis_status/<int:analysis_id>/",
+        views.get_analysis_status,
+        name="get_analysis_status",
     ),
     path(
-        "get_analysis_results/<int:job_posting_id>/<int:resume_id>/",
-        views.get_analysis_results,
-        name="get_analysis_results",
+        "start_analysis/<int:job_posting_id>/",
+        views.start_analysis,
+        name="start_analysis",
     ),
-    path("new_analysis/", views.new_analysis, name="new_analysis"),
+    path(
+        "stop_analysis/<int:analysis_id>/",
+        views.stop_analysis,
+        name="stop_analysis",
+    ),
 ]

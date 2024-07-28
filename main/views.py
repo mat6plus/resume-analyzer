@@ -1,31 +1,26 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.http import JsonResponse
-from django.core.cache import cache
+from collections import Counter
 from django.views.decorators.http import require_POST
-from .models import JobPosting, Resume, Analysis
-from .forms import JobPostingForm, ResumeForm, UserRegisterForm
-from bs4 import BeautifulSoup
+from django.core.exceptions import PermissionDenied
+from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-import requests
-import os
+from .models import JobPosting, Resume, Analysis, UserProfile
+from .forms import JobPostingForm, ResumeForm, UserRegisterForm
+from .tasks import crawl_job_posting_task, analyze_resume_job_task
+from django.core.cache import cache
+import json
+import logging
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-import PyPDF2
-import docx2txt
-import logging
-import threading
-import json
-
 
 nltk.data.path.append(settings.NLTK_DATA)
-
 nltk.download("punkt")
 nltk.download("stopwords")
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +36,7 @@ def register(request):
         form = UserRegisterForm()
     return render(request, "main/signup.html", {"form": form})
 
-
+@login_required
 def home(request):
     return render(request, "main/home.html")
 
@@ -51,33 +46,48 @@ def home(request):
 def update_profile(request):
     data = json.loads(request.body)
     user = request.user
-    user.name = data.get("name", user.name)
+    user.first_name = data.get("first_name", user.first_name)
+    user.last_name = data.get("last_name", user.last_name)
     user.email = data.get("email", user.email)
     profile = user.profile
     profile.bio = data.get("bio", profile.bio)
     user.save()
     profile.save()
-    return JsonResponse({"name": user.name, "email": user.email, "bio": profile.bio})
+    return JsonResponse({
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "bio": profile.bio
+    })
 
 
 @login_required
 def job_posting_input(request):
     if request.method == "POST":
-        form = JobPostingForm(request.POST)
+        form = JobPostingForm(request.POST, request.FILES)
         if form.is_valid():
             job_posting = form.save(commit=False)
             job_posting.user = request.user
             job_posting.save()
 
-            if job_posting.url:
-                threading.Thread(
-                    target=crawl_job_posting, args=(job_posting.id,)
-                ).start()
-            else:
-                job_posting.keywords = extract_keywords(job_posting.content)
-                job_posting.save()
+            resume = Resume(user=request.user, file=request.FILES['resume'])
+            resume.save()
 
-            return redirect("resume_upload", job_posting_id=job_posting.id)
+            analysis = Analysis.objects.create(
+                user=request.user,
+                job_posting=job_posting,
+                resume=resume,
+                status='pending'
+            )
+
+            crawl_job_posting_task.delay(job_posting.id)
+            return JsonResponse({
+                'status': 'success',
+                'job_posting_id': job_posting.id,
+                'analysis_id': analysis.id
+            })
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors})
     else:
         form = JobPostingForm()
     return render(request, "main/job_posting_input.html", {"form": form})
@@ -85,46 +95,149 @@ def job_posting_input(request):
 
 @login_required
 def resume_upload(request, job_posting_id):
-    job_posting = JobPosting.objects.get(id=job_posting_id)
+    job_posting = get_object_or_404(JobPosting, id=job_posting_id, user=request.user)
     if request.method == "POST":
         form = ResumeForm(request.POST, request.FILES)
         if form.is_valid():
             resume = form.save(commit=False)
             resume.user = request.user
             resume.save()
-            try:
-                resume.content = extract_text_from_resume(resume.file)
-                resume.save()
-                return redirect(
-                    "analysis", job_posting_id=job_posting.id, resume_id=resume.id
-                )
-            except Exception as e:
-                logger.error(f"Error extracting text from resume: {str(e)}")
-                form.add_error(
-                    "file",
-                    "Unable to process the resume. Please check the file and try again.",
-                )
+            return redirect("main:analysis", job_posting_id=job_posting.id, resume_id=resume.id)
     else:
         form = ResumeForm()
-    return render(
-        request, "main/resume_upload.html", {"form": form, "job_posting": job_posting}
-    )
+    return render(request, "main/resume_upload.html", {"form": form, "job_posting": job_posting})
 
 
 @login_required
 def analysis(request, job_posting_id, resume_id):
-    job_posting = JobPosting.objects.get(id=job_posting_id)
-    resume = Resume.objects.get(id=resume_id)
-
-    threading.Thread(
-        target=analyze_resume_job, args=(job_posting.id, resume.id)
-    ).start()
-
-    return render(
-        request,
-        "main/analysis_results.html",
-        {"job_posting": job_posting, "resume": resume},
+    job_posting = get_object_or_404(JobPosting, id=job_posting_id, user=request.user)
+    resume = get_object_or_404(Resume, id=resume_id, user=request.user)
+    analysis, created = Analysis.objects.get_or_create(
+        user=request.user,
+        job_posting=job_posting,
+        resume=resume,
+        defaults={'status': 'pending'}
     )
+    if created:
+        analyze_resume_job_task.delay(analysis.id)
+    return render(request, "main/analysis.html", {
+        "job_posting": job_posting,
+        "resume": resume,
+        "analysis": analysis
+    })
+    
+@login_required
+@require_POST
+def start_analysis(request, analysis_id):
+    analysis = get_object_or_404(Analysis, id=analysis_id, user=request.user)
+    if analysis.status not in ['in_progress', 'completed']:
+        analysis.status = 'in_progress'
+        analysis.save()
+        analyze_resume_job_task.delay(analysis.id)
+        return JsonResponse({"status": "started"})
+    return JsonResponse({"status": "already_in_progress"}, status=400)
+
+@login_required
+@require_POST
+def stop_analysis(request, analysis_id):
+    analysis = get_object_or_404(Analysis, id=analysis_id, user=request.user)
+    if analysis.status == 'in_progress':
+        analysis.status = 'stopped'
+        analysis.save()
+        return JsonResponse({"status": "stopped"})
+    return JsonResponse({"status": "not_in_progress"}, status=400)
+
+@login_required
+def get_analysis_status(request, analysis_id):
+    analysis = get_object_or_404(Analysis, id=analysis_id, user=request.user)
+    return JsonResponse({
+        "status": analysis.status,
+        "progress": analysis.progress,
+        "match_percentage": analysis.match_percentage,
+        "suggestions": analysis.suggestions
+    })
+
+@login_required
+def get_analysis_results(request, job_posting_id, resume_id):
+    job_posting = get_object_or_404(JobPosting, id=job_posting_id, user=request.user)
+    resume = get_object_or_404(Resume, id=resume_id, user=request.user)
+    analysis, created = Analysis.objects.get_or_create(
+        user=request.user,
+        job_posting=job_posting,
+        resume=resume,
+        defaults={'status': 'pending'}
+    )
+    
+    # Calculate match percentage
+    match_percentage = calculate_match_percentage(job_posting, resume)
+    
+    # Generate suggestions
+    suggestions = generate_suggestions(job_posting, resume)
+    
+    return render(request, "main/analysis_results.html", {
+        "job_posting": job_posting,
+        "resume": resume,
+        "analysis": analysis,
+        "match_percentage": match_percentage,
+        "suggestions": suggestions
+    })
+
+def calculate_match_percentage(job_posting, resume):
+    # Tokenize job posting and resume text
+    job_description_tokens = word_tokenize(job_posting.description.lower())
+    resume_content_tokens = word_tokenize(resume.content.lower())
+    
+    # Remove stop words
+    stop_words = set(stopwords.words('english'))
+    job_description_tokens = [word for word in job_description_tokens if word.isalnum() and word not in stop_words]
+    resume_content_tokens = [word for word in resume_content_tokens if word.isalnum() and word not in stop_words]
+    
+    # Count occurrences of words
+    job_counter = Counter(job_description_tokens)
+    resume_counter = Counter(resume_content_tokens)
+    
+    # Calculate total keywords in job description
+    total_keywords = len(job_counter)
+    
+    # Calculate matched keywords
+    matched_keywords = sum((resume_counter[word] for word in job_counter))
+    
+    # Calculate match percentage
+    if total_keywords == 0:
+        return 0  # Avoid division by zero
+    match_percentage = (matched_keywords / total_keywords) * 100
+    return round(match_percentage, 2)
+
+def generate_suggestions(job_posting, resume):
+    # Tokenize job posting and resume text
+    job_description_tokens = word_tokenize(job_posting.description.lower())
+    resume_content_tokens = word_tokenize(resume.content.lower())
+    
+    # Remove stop words
+    stop_words = set(stopwords.words('english'))
+    job_description_tokens = [word for word in job_description_tokens if word.isalnum() and word not in stop_words]
+    resume_content_tokens = [word for word in resume_content_tokens if word.isalnum() and word not in stop_words]
+    
+    # Identify missing keywords
+    job_keywords_set = set(job_description_tokens)
+    resume_keywords_set = set(resume_content_tokens)
+    
+    missing_keywords = job_keywords_set - resume_keywords_set
+    
+    # Generate suggestions based on missing keywords
+    suggestions = []
+    if missing_keywords:
+        suggestions.append("Consider adding the following keywords to your resume: " + ", ".join(missing_keywords))
+    
+    # Example suggestions based on common areas for improvement
+    if len(resume_content_tokens) < 300:
+        suggestions.append("Your resume could benefit from additional content or details.")
+    
+    if "lead" not in resume_content_tokens:
+        suggestions.append("Highlight any leadership experiences if applicable.")
+
+    return suggestions
+
 
 
 @login_required
@@ -133,122 +246,17 @@ def user_profile(request):
     return render(request, "main/user_profile.html", {"analyses": analyses})
 
 
-def crawl_job_posting(job_posting_id):
-    job_posting = JobPosting.objects.get(id=job_posting_id)
-    cache.set(f"crawl_progress_{job_posting_id}", 0, timeout=300)
-
-    try:
-        response = requests.get(job_posting.url)
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        job_description = soup.find("div", class_="job-description").get_text()
-        job_posting.content = job_description
-        job_posting.keywords = extract_keywords(job_description)
-        job_posting.save()
-
-        cache.set(f"crawl_progress_{job_posting_id}", 100, timeout=300)
-    except Exception as e:
-        logger.error(f"Error crawling job posting: {str(e)}")
-        cache.set(f"crawl_progress_{job_posting_id}", -1, timeout=300)
-
-
-def extract_keywords(text):
-    vectorizer = TfidfVectorizer(stop_words="english", max_features=50)
-    tfidf_matrix = vectorizer.fit_transform([text])
-    feature_names = vectorizer.get_feature_names_out()
-
-    return [feature_names[i] for i in tfidf_matrix.sum(axis=0).argsort()[0, -20:]]
-
-
-def extract_text_from_resume(file):
-    file_extension = os.path.splitext(file.name)[1].lower()
-
-    if file_extension == ".pdf":
-        reader = PyPDF2.PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-    elif file_extension in [".doc", ".docx"]:
-        text = docx2txt.process(file)
-    else:
-        raise ValueError("Unsupported file format")
-
-    return text
-
-
-def analyze_resume_job(job_posting_id, resume_id):
-    cache.set(f"analysis_progress_{job_posting_id}_{resume_id}", 0, timeout=300)
-
-    try:
-        job_posting = JobPosting.objects.get(id=job_posting_id)
-        resume = Resume.objects.get(id=resume_id)
-
-        resume_tokens = word_tokenize(resume.content.lower())
-        job_tokens = word_tokenize(" ".join(job_posting.keywords).lower())
-
-        stop_words = set(stopwords.words("english"))
-        resume_tokens = [word for word in resume_tokens if word not in stop_words]
-        job_tokens = [word for word in job_tokens if word not in stop_words]
-
-        vectorizer = TfidfVectorizer()
-        tfidf_matrix = vectorizer.fit_transform(
-            [" ".join(resume_tokens), " ".join(job_tokens)]
-        )
-        cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-
-        missing_keywords = set(job_tokens) - set(resume_tokens)
-        suggestions = f"Consider adding the following keywords to your resume: {', '.join(missing_keywords)}"
-
-        analysis = Analysis.objects.create(
-            user=resume.user,
-            job_posting=job_posting,
-            resume=resume,
-            match_percentage=cosine_sim * 100,
-            suggestions=suggestions,
-        )
-
-        cache.set(f"analysis_progress_{job_posting_id}_{resume_id}", 100, timeout=300)
-    except Exception as e:
-        logger.error(f"Error analyzing resume: {str(e)}")
-        cache.set(f"analysis_progress_{job_posting_id}_{resume_id}", -1, timeout=300)
-
-
 @login_required
+@csrf_exempt
 @require_POST
 def crawl_progress(request, job_posting_id):
-    progress = cache.get(f"crawl_progress_{job_posting_id}", 0)
-    return JsonResponse({"progress": progress})
+    job_posting = get_object_or_404(JobPosting, id=job_posting_id, user=request.user)
+    return JsonResponse({"progress": job_posting.crawl_progress})
 
-
-@login_required
-@require_POST
-def analysis_progress(request, job_posting_id, resume_id):
-    progress = cache.get(f"analysis_progress_{job_posting_id}_{resume_id}", 0)
-    return JsonResponse({"progress": progress})
-
-
-@login_required
-def get_analysis_results(request, job_posting_id, resume_id):
-    try:
-        analysis = Analysis.objects.get(
-            job_posting_id=job_posting_id, resume_id=resume_id
-        )
-        return JsonResponse(
-            {
-                "match_percentage": analysis.match_percentage,
-                "suggestions": analysis.suggestions,
-            }
-        )
-    except Analysis.DoesNotExist:
-        return JsonResponse({"error": "Analysis not found"}, status=404)
-
-
-@login_required
-def new_analysis(request):
-    return redirect("job_posting_input")
 
 def email_confirmation_sent_view(request):
     return render(request, 'account/email_confirmation_sent.html', {
         'signup_url': '/register/',
         'login_url': '/login/',
     })
+
