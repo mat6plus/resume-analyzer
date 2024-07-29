@@ -4,168 +4,170 @@
 {% block title %}Job Posting and Resume Analysis{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto" x-data="{ crawling: false, analyzing: false, progress: 0, formErrors: {}, analysisId: null }">
+<div class="max-w-md mx-auto"
+     x-data="{ 
+    crawling: false, 
+    analyzing: false, 
+    progress: 0, 
+    formErrors: {}, 
+    analysisId: null,
+    errorMessage: '',
+    analysisComplete: false,
+    matchPercentage: null,
+    suggestions: []
+     }"
+     x-init="$watch('errorMessage', value => { if(value) setTimeout(() => errorMessage = '', 5000) })">
+    
     <h1 class="text-3xl font-bold mb-4">Resume Analysis Information</h1>
-
-    <form id="analysis-form" method="post" enctype="multipart/form-data" @submit.prevent="submitForm">
+    
+    <form hx-post="{% url 'main:job_posting_input' %}"
+          hx-encoding="multipart/form-data"
+          hx-on::after-request="handleFormSubmission(event)"
+          x-ref="form"
+          @submit.prevent="submitForm">
         {% csrf_token %}
 
         <div class="mb-4">
-            <label for="{{ form.url.id_for_label }}" class="block text-sm font-medium text-gray-700">Job Posting URL</label>
+            <label for="url" class="block text-sm font-medium text-gray-700">Job Posting URL</label>
             {{ form.url }}
         </div>
 
         <div class="mb-4">
-            <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700">Job Title</label>
+            <label for="title" class="block text-sm font-medium text-gray-700">Job Title</label>
             {{ form.title }}
         </div>
 
         <div class="mb-4">
-            <label for="{{ form.company.id_for_label }}" class="block text-sm font-medium text-gray-700">Company</label>
+            <label for="company" class="block text-sm font-medium text-gray-700">Company</label>
             {{ form.company }}
         </div>
 
         <div class="mb-4">
             <label for="resume" class="block text-sm font-medium text-gray-700">Upload Resume</label>
-            <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" class="mt-1 block w-full" required>
+            <input type="file" id="resume" name="resume" required
+                   class="mt-1 block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-indigo-50 file:text-indigo-700
+                          hover:file:bg-indigo-100">
         </div>
 
-        <div id="form-errors" x-show="Object.keys(formErrors).length > 0" class="mb-4 text-red-500">
+        <div id="form-errors" class="mb-4 text-red-500" x-show="Object.keys(formErrors).length > 0">
             <template x-for="(error, field) in formErrors" :key="field">
-                <p x-text="error"></p>
+                <p x-text="`${field}: ${error}`"></p>
             </template>
         </div>
 
-        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" x-show="!analyzing">
+        <button type="submit" 
+                class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                x-bind:disabled="crawling || analyzing">
             Start Analysis
         </button>
     </form>
 
     <div class="mt-4" x-show="crawling || analyzing">
-        <p class="mb-2" x-text="crawling ? 'Crawling job posting...' : 'Analyzing resume...'"></p>
         <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
             <div class="bg-blue-600 h-2.5 rounded-full" x-bind:style="'width: ' + progress + '%'"></div>
         </div>
-        <button @click="stopAnalysis" class="mt-2 w-full bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" x-show="analyzing">
+        <button @click="stopAnalysis" 
+                class="mt-2 w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
             Stop Analysis
         </button>
     </div>
+
+    <div id="error-message" 
+         class="mt-4 text-red-500" 
+         x-show="errorMessage" 
+         x-text="errorMessage"></div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-    function submitForm() {
-        const form = document.getElementById('analysis-form');
-        const formData = new FormData(form);
-
-        this.crawling = true;
-        this.progress = 0;
-        this.formErrors = {};
-
-        axios.post('{% url "main:job_posting_input" %}', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        })
-        .then(response => {
-            if (response.data.status === 'success') {
-                this.startCrawlingProgress(response.data.job_posting_id);
-            } else {
-                this.formErrors = response.data.errors;
-                this.crawling = false;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            this.crawling = false;
-            this.formErrors = { general: 'An error occurred. Please try again.' };
-        });
-    }
-
-    function startCrawlingProgress(jobPostingId) {
-        const progressInterval = setInterval(() => {
-            axios.get(`{% url "main:crawl_progress" 0 %}`.replace('0', jobPostingId))
-                .then(response => {
-                    this.progress = response.data.progress;
-                    if (this.progress >= 100 || response.data.status === 'completed' || response.data.status === 'failed') {
-                        clearInterval(progressInterval);
-                        if (response.data.status === 'completed') {
-                            this.startAnalysis(jobPostingId);
-                        } else if (response.data.status === 'failed') {
-                            this.crawling = false;
-                            this.formErrors = { general: 'Job posting crawling failed. Please check the job posting URL and try again.' };
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    clearInterval(progressInterval);
-                    this.crawling = false;
-                    this.formErrors = { general: 'An error occurred while crawling. Please try again.' };
-                });
-        }, 1000);
-    }
-
-    function startAnalysis(jobPostingId) {
-        this.crawling = false;
-        this.analyzing = true;
-        this.progress = 0;
-
-        axios.post(`{% url "main:start_analysis" 0 %}`.replace('0', jobPostingId))
-            .then(response => {
-                if (response.data.status === 'started') {
-                    this.analysisId = response.data.analysis_id;
-                    this.checkAnalysisProgress();
-                } else {
-                    this.analyzing = false;
-                    this.formErrors = { general: 'Failed to start analysis. Please try again.' };
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
+    function handleFormSubmission(event) {
+        const detail = event.detail;
+        if (detail.successful) {
+            const response = JSON.parse(detail.xhr.response);
+            if (response.status === 'success') {
+                this.analysisId = response.analysis_id;
+                this.crawling = true;
                 this.analyzing = false;
-                this.formErrors = { general: 'An error occurred while starting analysis. Please try again.' };
-            });
+                this.progress = 0;
+                this.formErrors = {};
+                this.errorMessage = '';
+                this.startProgressPolling();
+            } else if (response.status === 'error') {
+                this.formErrors = response.errors || {};
+                this.errorMessage = 'Please correct the errors in the form.';
+            } else {
+                this.errorMessage = 'Unexpected response from server';
+            }
+        } else {
+            this.errorMessage = 'An error occurred while submitting the form. Please try again.';
+        }
     }
 
-    function checkAnalysisProgress() {
-        const progressInterval = setInterval(() => {
-            axios.get(`{% url "main:get_analysis_status" 0 %}`.replace('0', this.analysisId))
-                .then(response => {
-                    this.progress = response.data.progress;
-                    if (response.data.status === 'completed' || response.data.status === 'failed' || response.data.status === 'stopped') {
-                        clearInterval(progressInterval);
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('formHandler', () => ({
+            submitForm() {
+                this.$refs.form.dispatchEvent(new Event('submit'));
+            },
+
+            startProgressPolling() {
+                const pollProgress = () => {
+                    if (!this.crawling && !this.analyzing) return;
+
+                    fetch(`/get_analysis_status/${this.analysisId}/`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.progress = data.progress;
+                            if (data.status === 'completed') {
+                                this.crawling = false;
+                                this.analyzing = false;
+                                window.location.href = `/analysis/${this.analysisId}/`;
+                            } else if (data.status === 'failed') {
+                                throw new Error('Analysis failed. Please try again.');
+                            } else {
+                                setTimeout(pollProgress, 1000);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            this.errorMessage = error.message || 'An error occurred while fetching progress. Please try again.';
+                            this.crawling = false;
+                            this.analyzing = false;
+                        });
+                };
+
+                pollProgress();
+            },
+
+            stopAnalysis() {
+                if (!this.analysisId) return;
+
+                fetch(`/stop_analysis/${this.analysisId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'stopped') {
+                        this.crawling = false;
                         this.analyzing = false;
-                        if (response.data.status === 'completed') {
-                            window.location.href = `{% url "main:analysis_results" job_posting_id=0 resume_id=1 %}`.replace('0', response.data.job_posting_id).replace('1', response.data.resume_id);
-                        } else {
-                            this.formErrors = { general: 'Analysis ' + response.data.status + '. Please try again.' };
-                        }
+                        this.errorMessage = 'Analysis stopped by user.';
+                    } else {
+                        throw new Error('Failed to stop analysis');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    clearInterval(progressInterval);
-                    this.analyzing = false;
-                    this.formErrors = { general: 'An error occurred while checking analysis progress. Please try again.' };
+                    this.errorMessage = error.message || 'An error occurred while stopping the analysis. It may have already completed.';
                 });
-        }, 1000);
-    }
-
-    function stopAnalysis() {
-        axios.post(`{% url "main:stop_analysis" 0 %}`.replace('0', this.analysisId))
-            .then(response => {
-                if (response.data.status === 'stopped') {
-                    this.analyzing = false;
-                    this.formErrors = { general: 'Analysis stopped by user.' };
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                this.formErrors = { general: 'Failed to stop analysis. Please try again.' };
-            });
-    }
+            }
+        }));
+    });
 </script>
 {% endblock %}

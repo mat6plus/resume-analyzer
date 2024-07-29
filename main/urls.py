@@ -17,23 +17,12 @@ urlpatterns = [
     ),
     path(
         "analysis_results/<int:job_posting_id>/<int:resume_id>/",
-        views.get_analysis_results,
+        views.analysis_results,
         name="analysis_results",
     ),
     path("user_profile/", views.user_profile, name="user_profile"),
     path("update-profile/", views.update_profile, name="update_profile"),
-    path(
-        "crawl_progress/<int:job_posting_id>/",
-        views.crawl_progress,
-        name="crawl_progress",
-    ),
-    path('analysis_results/<int:job_posting_id>/<int:resume_id>/', views.get_analysis_results, name='analysis_results'),
     path('email-confirmation-sent/', views.email_confirmation_sent_view, name='email_confirmation_sent'),
-    path(
-        "get_analysis_status/<int:analysis_id>/",
-        views.get_analysis_status,
-        name="get_analysis_status",
-    ),
     path(
         "start_analysis/<int:job_posting_id>/",
         views.start_analysis,
