@@ -1,122 +1,51 @@
 from celery import shared_task
+from celery.exceptions import MaxRetriesExceededError, Retry
+from django.core.exceptions import ObjectDoesNotExist
+from .utils import calculate_match_percentage, generate_suggestions, extract_text_from_resume
 from .models import JobPosting, Resume, Analysis
-from bs4 import BeautifulSoup
+from transformers import pipeline
+import time
 import requests
 import logging
-import chardet
-import PyPDF2
-import docx2txt
-import logging
-import os
-from .utils import calculate_match_percentage, extract_keywords, generate_suggestions, extract_text_from_resume
+
 
 logger = logging.getLogger(__name__)
 
-@shared_task
-def crawl_job_posting_task(job_posting_id):
-    job_posting = JobPosting.objects.get(id=job_posting_id)
-    job_posting.status = 'crawling'
-    job_posting.save()
+def update_progress(analysis, progress):
+    analysis.progress = progress
+    analysis.save()
 
-    try:
-        response = requests.get(job_posting.url, timeout=10)
-        logger.info(f"Response status code: {response.status_code}")
-        logger.info(f"Response content: {response.text[:500]}...")  # Log first 500 chars
+def check_if_stopped(analysis):
+    analysis.refresh_from_db()
+    return analysis.status == 'stopped'
 
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        job_description = soup.find("div", class_="job-description")
-        if not job_description:
-            job_description = soup.find("p", class_="job-description") or soup.find("section", id="job-details")
-
-        if job_description:
-            job_posting.content = job_description.get_text()
-            logger.info(f"Extracted job description: {job_posting.content[:500]}...")  # Log first 500 chars
-            job_posting.keywords = extract_keywords(job_posting.content)
-            job_posting.status = 'completed'
-        else:
-            logger.error(f"Job description not found for job posting {job_posting_id}. HTML content: {soup.prettify()}")
-            job_posting.status = 'failed'
-
-        job_posting.save()
-
-        analysis = Analysis.objects.filter(job_posting_id=job_posting_id).first()
-        if analysis:
-            analyze_resume_job_task.delay(analysis.id)
-
-    except Exception as e:
-        job_posting.status = 'failed'
-        logger.error(f"Error crawling job posting {job_posting_id}: {str(e)}")
-        logger.exception("Full traceback:")
-        job_posting.save()
-
-
-def extract_text_from_resume(file):
-    file_extension = os.path.splitext(file.name)[1].lower()
-
-    try:
-        if file_extension == '.pdf':
-            return extract_text_from_pdf(file)
-        elif file_extension in ['.doc', '.docx']:
-            return extract_text_from_docx(file)
-        elif file_extension in ['.txt', '.rtf']:
-            return extract_text_from_text(file)
-        else:
-            raise ValueError(f"Unsupported file format: {file_extension}")
-    except Exception as e:
-        logger.error(f"Error extracting text from resume: {str(e)}")
-        raise
-
-def extract_text_from_pdf(file):
-    try:
-        reader = PyPDF2.PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-        return text
-    except Exception as e:
-        logger.error(f"Error extracting text from PDF: {str(e)}")
-        raise
-
-def extract_text_from_docx(file):
-    try:
-        text = docx2txt.process(file)
-        return text
-    except Exception as e:
-        logger.error(f"Error extracting text from DOCX: {str(e)}")
-        raise
-
-def extract_text_from_text(file):
-    try:
-        raw_data = file.read()
-        result = chardet.detect(raw_data)
-        encoding = result['encoding']
-        return raw_data.decode(encoding)
-    except Exception as e:
-        logger.error(f"Error extracting text from text file: {str(e)}")
-        raise
-
-
-@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def analyze_resume_job_task(self, analysis_id):
     try:
         analysis = Analysis.objects.get(id=analysis_id)
         analysis.status = 'in_progress'
-        analysis.save()
+        update_progress(analysis, 10)
 
         job_posting = analysis.job_posting
         resume = analysis.resume
 
-        # Check if job posting content is available
-        if not job_posting.content:
-            logger.info(f"Job posting content not available for analysis_id: {analysis_id}. Retrying...")
-            raise Retry()
+        if check_if_stopped(analysis):
+            analysis.status = 'stopped'
+            analysis.save()
+            return
 
-        job_description = job_posting.content
+        job_description = job_posting.job_description
         resume_text = extract_text_from_resume(resume.file)
 
         if not job_description.strip() or not resume_text.strip():
-            raise ValueError("Job description or resume text is empty after extraction.")
+            raise ValueError("Job description or resume text is empty after extraction")
+
+        update_progress(analysis, 50)
+
+        if check_if_stopped(analysis):
+            analysis.status = 'stopped'
+            analysis.save()
+            return
 
         # Calculate match percentage
         match_percentage = calculate_match_percentage(job_description, resume_text)
@@ -124,24 +53,79 @@ def analyze_resume_job_task(self, analysis_id):
         # Generate suggestions
         suggestions = generate_suggestions(job_description, resume_text)
 
+        if check_if_stopped(analysis):
+            analysis.status = 'stopped'
+            analysis.save()
+            return
+
         analysis.match_percentage = match_percentage
         analysis.suggestions = '\n'.join(suggestions) if suggestions else "No suggestions available."
         analysis.status = 'completed'
-        analysis.save()
+        update_progress(analysis, 100)
+
+        # Generate cover letter
+        generate_cover_letter_task.delay(analysis.id)
+
+        # Suggest resume rewrite if necessary
+        suggest_resume_rewrite_task.delay(analysis.id)
 
         logger.info(f"Analysis completed for analysis_id: {analysis_id}")
-        logger.info(f"Match percentage: {match_percentage}")
-        logger.info(f"Suggestions: {suggestions}")
 
-    except Retry as e:
-        raise self.retry(exc=e)
     except ObjectDoesNotExist:
         logger.error(f"Analysis object not found for id: {analysis_id}")
-        return
-    except Exception as e:
+    except ValueError as e:
+        logger.error(f"Error in analysis for {analysis_id}: {str(e)}")
         analysis.status = 'failed'
-        error_message = f"Error analyzing resume {analysis_id}: {str(e)}"
-        logger.error(error_message)
-        logger.exception("Full traceback:")
-        analysis.suggestions = error_message
+        analysis.suggestions = f"Error in analysis: {str(e)}"
         analysis.save()
+    except Exception as e:
+        logger.error(f"Error analyzing resume {analysis_id}: {str(e)}")
+        logger.exception("Full traceback:")
+        analysis.status = 'failed'
+        analysis.suggestions = f"Error analyzing resume: {str(e)}"
+        analysis.save()
+
+@shared_task
+def generate_cover_letter_task(analysis_id):
+    try:
+        analysis = Analysis.objects.get(id=analysis_id)
+        job_description = analysis.job_posting.job_description
+        resume_text = extract_text_from_resume(analysis.resume.file)
+        
+        generator = pipeline('text-generation', model='gpt2')
+        prompt = f"Write a cover letter for the following job description:\n\n{job_description}\n\nBased on the following resume:\n\n{resume_text}\n\nCover letter:"
+        
+        cover_letter = generator(prompt, max_length=500, num_return_sequences=1)[0]['generated_text']
+        
+        analysis.cover_letter = cover_letter
+        analysis.save()
+        
+        logger.info(f"Cover letter generated for analysis_id: {analysis_id}")
+    except Exception as e:
+        logger.error(f"Error generating cover letter for analysis {analysis_id}: {str(e)}")
+
+@shared_task
+def suggest_resume_rewrite_task(analysis_id):
+    try:
+        analysis = Analysis.objects.get(id=analysis_id)
+        match_percentage = analysis.match_percentage
+        
+        if match_percentage < 50:
+            rewrite_suggestion = "Your resume might benefit from a rewrite. Consider using an AI-powered resume writing service to improve your match percentage."
+        elif match_percentage < 70:
+            rewrite_suggestion = "While your resume shows some alignment with the job description, there may be room for improvement. Consider tailoring your resume more specifically to this job."
+        else:
+            rewrite_suggestion = "Your resume appears to be well-aligned with the job description. Keep up the good work!"
+        
+        analysis.rewrite_suggestion = rewrite_suggestion
+        analysis.save()
+        
+        logger.info(f"Resume rewrite suggestion generated for analysis_id: {analysis_id}")
+    except Exception as e:
+        logger.error(f"Error generating resume rewrite suggestion for analysis {analysis_id}: {str(e)}")
+
+# @shared_task
+# def retry_failed_job_postings():
+#     failed_postings = JobPosting.objects.filter(status='failed')
+#     for posting in failed_postings:
+#         crawl_job_posting_task.delay(posting.id)

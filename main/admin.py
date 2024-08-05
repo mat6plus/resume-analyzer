@@ -7,12 +7,12 @@ from .models import JobPosting, Resume, Analysis
 
 @admin.register(JobPosting)
 class JobPostingAdmin(admin.ModelAdmin):
-    list_display = ("title", "company", "user", "created_at", "url_link")
-    list_filter = ("company", "created_at")
-    search_fields = ("title", "company", "user__username")
+    list_display = ("job_name", "job_description", "company_name", "user", "created_at")
+    list_filter = ("company_name", "created_at")
+    search_fields = ("job_name", "company_name", "user__username")
     readonly_fields = ("created_at",)
     fieldsets = (
-        (None, {"fields": ("user", "title", "company", "url", "content")}),
+        (None, {"fields": ("user", "job_name", "job_description", "company_name")}),
         (
             "Advanced options",
             {

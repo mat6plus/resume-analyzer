@@ -1,0 +1,51 @@
+<div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mt-8">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Generated Cover Letter</h2>
+    <div id="cover-letter-content" class="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
+        {{ cover_letter|linebreaks }}
+    </div>
+    <div class="mt-6 flex space-x-4">
+        <button onclick="exportAsPDF()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">
+            Export as PDF
+        </button>
+        <button onclick="exportAsDocx()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">
+            Export as DOCX
+        </button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.3.0/docx.min.js"></script>
+<script>
+    function exportAsPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const content = document.getElementById('cover-letter-content').innerText;
+        doc.text(content, 10, 10);
+        doc.save('cover_letter.pdf');
+    }
+
+    function exportAsDocx() {
+        const content = document.getElementById('cover-letter-content').innerText;
+        const doc = new docx.Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new docx.Paragraph({
+                        children: [new docx.TextRun(content)],
+                    }),
+                ],
+            }],
+        });
+
+        docx.Packer.toBlob(doc).then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style = 'display: none';
+            a.href = url;
+            a.download = 'cover_letter.docx';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        });
+    }
+</script>

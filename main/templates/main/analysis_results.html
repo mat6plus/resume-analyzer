@@ -1,78 +1,73 @@
 {% extends 'main/base.html' %}
 {% load static %}
-
 {% block title %}Analysis Results{% endblock %}
-
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-6">Resume Analysis Results</h1>
 
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div class="px-4 py-5 sm:px-6">
-            <h2 class="text-lg leading-6 font-medium text-gray-900">Job Details</h2>
-        </div>
-        <div class="border-t border-gray-200">
-            <dl>
-                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Job Title</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ job_posting.title }}</dd>
-                </div>
-                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Company</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ job_posting.company }}</dd>
-                </div>
-            </dl>
-        </div>
-    </div>
+<div class="max-w-4xl mx-auto px-4 py-8"
+     x-data="{
+         analysisComplete: true,
+         matchPercentage: {{ analysis.match_percentage }},
+         suggestions: {{ analysis.suggestions|safe }},
+         jobName: '{{ analysis.job_posting.job_name }}',
+         companyNamme: '{{ analysis.job_posting.company_name }}',
+         darkMode: false
+     }"
+     x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode')) || false;
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))
+     "
+     :class="{ 'dark': darkMode }">
 
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-        <div class="px-4 py-5 sm:px-6">
-            <h2 class="text-lg leading-6 font-medium text-gray-900">Analysis Results</h2>
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Analysis Results</h1>
+            <button @click="darkMode = !darkMode" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <svg x-show="!darkMode" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <svg x-show="darkMode" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            </button>
         </div>
-        <div class="border-t border-gray-200">
-            <dl>
-                <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Match Percentage</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                        <div class="relative pt-1">
-                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-indigo-200">
-                                <div style="width:{{ match_percentage }}%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-500"></div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-sm font-semibold inline-block text-indigo-600">
-                                    {{ match_percentage }}%
-                                </span>
-                            </div>
-                        </div>
-                    </dd>
-                </div>
-                <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt class="text-sm font-medium text-gray-500">Top Job Keywords</dt>
-                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                        {% for keyword in keywords %}
-                            <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">
-                                {{ keyword }}
-                            </span>
-                        {% endfor %}
-                    </dd>
-                </div>
-            </dl>
-        </div>
-    </div>
 
-    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div class="px-4 py-5 sm:px-6">
-            <h2 class="text-lg leading-6 font-medium text-gray-900">Suggestions for Improvement</h2>
+        <div class="mb-6">
+            <h2 class="text-2xl font-semibold mb-2 text-gray-900 dark:text-white">Job Details</h2>
+            <p class="text-gray-700 dark:text-gray-300"><strong>Title:</strong> <span x-text="jobName"></span></p>
+            <p class="text-gray-700 dark:text-gray-300"><strong>Company:</strong> <span x-text="company_name"></span></p>
         </div>
-        <div class="border-t border-gray-200">
-            <ul class="divide-y divide-gray-200">
-                {% for suggestion in suggestions %}
-                    <li class="px-4 py-4 sm:px-6">{{ suggestion }}</li>
-                {% empty %}
-                    <li class="px-4 py-4 sm:px-6">No specific suggestions at this time. Your resume appears to be well-matched for this job posting.</li>
-                {% endfor %}
+
+        <div class="mb-6">
+            <h2 class="text-2xl font-semibold mb-2 text-gray-900 dark:text-white">Match Percentage</h2>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700">
+                <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                     x-bind:style="'width: ' + matchPercentage + '%'"></div>
+            </div>
+            <p class="text-gray-700 dark:text-gray-300"><span x-text="matchPercentage"></span>% match</p>
+        </div>
+
+        <div class="mb-6">
+            <h2 class="text-2xl font-semibold mb-2 text-gray-900 dark:text-white">Suggestions for Improvement</h2>
+            <ul class="list-disc pl-5 text-gray-700 dark:text-gray-300">
+                <template x-for="suggestion in suggestions" :key="suggestion">
+                    <li x-text="suggestion"></li>
+                </template>
             </ul>
         </div>
+
+        <div class="mt-8">
+            <a href="{% url 'main:cover_letter' analysis.id %}"
+               class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded inline-block transition duration-150 ease-in-out"
+               hx-get="{% url 'main:cover_letter' analysis.id %}"
+               hx-target="#cover-letter-container"
+               hx-swap="innerHTML">
+                View Generated Cover Letter
+            </a>
+        </div>
+
+        <div id="cover-letter-container" class="mt-8"></div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/htmx.org@1.6.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 {% endblock %}

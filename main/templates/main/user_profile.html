@@ -46,26 +46,105 @@
 
   <div class="mt-8 bg-white shadow-md rounded-lg p-6">
     <h2 class="text-2xl font-semibold mb-4">Resume Analysis History</h2>
+
+    <form method="get" class="mb-4">
+        <div class="flex space-x-4">
+            <input type="text" name="search" placeholder="Search by job title or company" value="{{ search_query }}" class="flex-grow p-2 border rounded">
+            <select name="filter" class="p-2 border rounded">
+                <option value="">All</option>
+                <option value="high_match" {% if filter_by == 'high_match' %}selected{% endif %}>High Match (≥75%)</option>
+                <option value="low_match" {% if filter_by == 'low_match' %}selected{% endif %}>Low Match (<50%)</option>
+            </select>
+            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Apply</button>
+        </div>
+    </form>
+
     <div class="space-y-4">
-      {% for analysis in analyses %}
-      <div class="border-b pb-4">
-        <p class="font-semibold">Job Title: {{ analysis.job_title }}</p>
-        <p>Company: {{ analysis.company }}</p>
-        <p>Match Percentage: {{ analysis.match_percentage }}%</p>
-        <p>Date: {{ analysis.created_at }}</p>
-        <a href="{% url 'main:analysis_results' analysis.job_posting_id analysis.resume_id %}" class="text-blue-500 hover:text-blue-600">View Details</a>
-      </div>
-      {% empty %}
-      <p>No analysis history available.</p>
-      {% endfor %}
+        {% for analysis in page_obj %}
+        <div class="border-b pb-4">
+            <h3 class="font-semibold">{{ analysis.job_posting.title }} at {{ analysis.job_posting.company }}</h3>
+            <p>Match Percentage: {{ analysis.match_percentage }}%</p>
+            <p>Date: {{ analysis.created_at }}</p>
+            <a href="{% url 'main:analysis_results' analysis.job_posting.id analysis.resume.id %}" class="text-blue-500 hover:text-blue-600">View Details</a>
+        </div>
+        {% empty %}
+        <p>No analysis history available.</p>
+        {% endfor %}
     </div>
+
+    <!-- Pagination -->
+    <div class="mt-4 flex justify-between items-center">
+        <span class="text-sm text-gray-700">
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+        </span>
+        <nav class="inline-flex rounded-md shadow-sm">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">Next</a>
+            {% endif %}
+        </nav>
+    </div>
+</div>
+    <!-- Dashboard Overview -->
+    <div class="mt-8 bg-white shadow-md rounded-lg p-6">
+      <h2 class="text-2xl font-semibold mb-4">Dashboard Overview</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-blue-100 p-4 rounded-lg">
+              <h3 class="font-semibold">Total Analyses</h3>
+              <p class="text-2xl">{{ total_analyses }}</p>
+          </div>
+          <div class="bg-green-100 p-4 rounded-lg">
+              <h3 class="font-semibold">Average Match %</h3>
+              <p class="text-2xl">{{ average_match_percentage|floatformat:2 }}%</p>
+          </div>
+          <div class="bg-yellow-100 p-4 rounded-lg">
+              <h3 class="font-semibold">Latest Match %</h3>
+              <p class="text-2xl">{{ latest_match_percentage|default:"N/A" }}</p>
+          </div>
+      </div>
+      <!-- Add a chart here using a JavaScript charting library -->
   </div>
+
+<!-- New Analysis and Clear History buttons -->
+<div class="mt-4 flex justify-between">
+    <a href="{% url 'main:job_posting_input' %}" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+        Start New Analysis
+    </a>
+    <button @click="confirmClearHistory" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+        Clear History
+    </button>
+</div>
+</div>
+
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 {% url "update_profile" as update_profile_url %}
 <script>
+  function confirmClearHistory() {
+    if (confirm('Are you sure you want to clear your analysis history? This action cannot be undone.')) {
+        // Send AJAX request to clear history
+        fetch('{% url "main:clear_history" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to clear history. Please try again.');
+            }
+        });
+    }
+}
+
   function saveProfile() {
     // Get the CSRF token from the cookie
     function getCookie(name) {

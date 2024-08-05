@@ -7,6 +7,12 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import spacy
 import logging
+import PyPDF2
+import docx2txt
+import os
+import chardet
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +126,44 @@ def generate_suggestions(job_description, resume_text):
     return suggestions
 
 def extract_text_from_resume(file):
-    # Implementation depends on the file type (pdf, docx, etc.)
-    # For simplicity, let's assume it's a text file
-    return file.read().decode('utf-8')
+    file_extension = os.path.splitext(file.name)[1].lower()
+
+    try:
+        if file_extension == '.pdf':
+            return extract_text_from_pdf(file)
+        elif file_extension in ['.doc', '.docx']:
+            return extract_text_from_docx(file)
+        else:
+            raise ValueError(f"Unsupported file format: {file_extension}")
+    except Exception as e:
+        logger.error(f"Error extracting text from resume: {str(e)}")
+        raise
+
+def extract_text_from_pdf(file):
+    try:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        return text
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF: {str(e)}")
+        raise
+
+def extract_text_from_docx(file):
+    try:
+        text = docx2txt.process(file)
+        return text
+    except Exception as e:
+        logger.error(f"Error extracting text from DOCX: {str(e)}")
+        raise
+
+def extract_text_from_text(file):
+    try:
+        raw_data = file.read()
+        result = chardet.detect(raw_data)
+        encoding = result['encoding']
+        return raw_data.decode(encoding)
+    except Exception as e:
+        logger.error(f"Error extracting text from text file: {str(e)}")
+        raise
