@@ -15,6 +15,7 @@ urlpatterns = [
         views.analysis,
         name="analysis",
     ),
+    path("start_analysis/", views.start_analysis, name="start_analysis"),
     path(
         "get-analysis-status/<int:analysis_id>/",
         views.get_analysis_status,
@@ -28,7 +29,6 @@ urlpatterns = [
     path("cover_letter/<int:analysis_id>/", views.cover_letter, name="cover_letter"),
     path("user-profile/", views.user_profile, name="user_profile"),
     path("update-profile/", views.update_profile, name="update_profile"),
-    path("start-analysis/", views.start_analysis, name="start_analysis"),
     path("stop-analysis/<int:analysis_id>/", views.stop_analysis, name="stop_analysis"),
     path("clear-history/", views.clear_history, name="clear_history"),
     path(

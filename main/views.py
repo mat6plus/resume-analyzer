@@ -227,24 +227,8 @@ def start_analysis(request):
                 progress=0,
             )
 
-            # Generate cover letter using Hugging Face API
-            API_URL = "https://api-inference.huggingface.co/models/gpt2"  # Replace with the appropriate model
-            headers = {
-                "Authorization": "Bearer YOUR_API_KEY"
-            }  # Replace with your actual API key
-
-            def query(payload):
-                response = requests.post(API_URL, headers=headers, json=payload)
-                return response.json()
-
-            prompt = f"Write a cover letter for the following job:\n{job_posting.job_description}\n\nBased on this resume:\n{resume.content}\n\nCover Letter:"
-            output = query({"inputs": prompt, "parameters": {"max_length": 500}})
-
-            cover_letter = output[0]["generated_text"]
-            analysis.cover_letter = cover_letter
-            analysis.save()
-
-            chain(analyze_resume_job_task.si(analysis.id)).apply_async()
+            # Queue the analysis task
+            analyze_resume_job_task.delay(analysis.id)
 
             return JsonResponse(
                 {

@@ -50,27 +50,29 @@
         });
     },
     stopAnalysis() {
-        if (this.analysisId) {
-            fetch(`/stop_analysis/${this.analysisId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
+    if (this.analysisId) {
+        fetch(`/stop_analysis/${this.analysisId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+            .then((response) => response.json())
+            .then((data) => {
                 if (data.status === 'stopped') {
                     this.analyzing = false;
                     this.crawling = false;
                     this.statusMessage = 'Analysis stopped';
+                } else {
+                    this.errorMessage = 'An error occurred while stopping the analysis.';
                 }
             })
-            .catch(error => {
+            .catch((error) => {
                 console.error('Error:', error);
                 this.errorMessage = 'An error occurred while stopping the analysis.';
             });
-        }
-    },
+    }
+},
     checkAnalysisStatus() {
         if (!this.analysisId) return;
         fetch(`/get_analysis_status/${this.analysisId}/`)
