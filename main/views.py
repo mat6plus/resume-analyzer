@@ -98,37 +98,53 @@ def analysis(request, job_posting_id, resume_id):
 
 @login_required
 def get_analysis_status(request, analysis_id):
-    analysis = get_object_or_404(Analysis, id=analysis_id, user=request.user)
-    return JsonResponse(
-        {
-            "status": analysis.status,
-            "progress": analysis.progress,
-            "matchPercentage": analysis.match_percentage,
-            "suggestions": (
-                analysis.suggestions.split("\n") if analysis.suggestions else []
-            ),
-        }
-    )
+    try:
+        analysis = Analysis.objects.get(id=analysis_id, user=request.user)
+        return JsonResponse(
+            {
+                "status": analysis.status,
+                "progress": analysis.progress,
+                "matchPercentage": analysis.match_percentage,
+                "suggestions": (
+                    analysis.suggestions.split("\n") if analysis.suggestions else []
+                ),
+            }
+        )
+    except Analysis.DoesNotExist:
+        print(f"Analysis not found for analysis_id: {analysis_id}")
+        return JsonResponse({"error": "Analysis not found"}, status=404)
+    except Exception as e:
+        print(f"Error in get_analysis_status view: {str(e)}")
+        return JsonResponse({"error": "An unexpected error occurred"}, status=500)
 
 
 @login_required
 def analysis_results(request, analysis_id):
-    analysis = get_object_or_404(Analysis, id=analysis_id, user=request.user)
+    try:
+        analysis = get_object_or_404(Analysis, id=analysis_id, user=request.user)
+        job_posting = analysis.job_posting
+        resume = analysis.resume
 
-    context = {
-        "analysis": analysis,
-        "job_posting": analysis.job_posting,
-        "resume": analysis.resume,
-        "match_percentage": analysis.match_percentage,
-        "suggestions": analysis.suggestions.split("\n") if analysis.suggestions else [],
-        "cover_letter": analysis.cover_letter,
-        "rewrite_suggestion": analysis.rewrite_suggestion,
-    }
+        context = {
+            "analysis": analysis,
+            "job_posting": job_posting,
+            "resume": resume,
+            "match_percentage": analysis.match_percentage,
+            "suggestions": (
+                analysis.suggestions.split("\n") if analysis.suggestions else []
+            ),
+            "cover_letter": analysis.cover_letter,
+            "rewrite_suggestion": analysis.rewrite_suggestion,
+        }
 
-    if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse(context)
-    else:
-        return render(request, "main/analysis_results.html", context)
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse(context)
+        else:
+            return render(request, "main/analysis_results.html", context)
+
+    except Analysis.DoesNotExist:
+        # Display a user-friendly message or redirect the user
+        return render(request, "main/analysis_not_found.html", status=404)
 
 
 @login_required
@@ -256,12 +272,20 @@ def start_analysis(request):
 @csrf_exempt
 @require_POST
 def stop_analysis(request, analysis_id):
-    analysis = get_object_or_404(Analysis, id=analysis_id, user=request.user)
-    if analysis.status == "in_progress":
-        analysis.status = "stopped"
-        analysis.save()
-        return JsonResponse({"status": "stopped"})
-    return JsonResponse({"status": "not_in_progress"}, status=400)
+    try:
+        analysis = Analysis.objects.get(id=analysis_id, user=request.user)
+        if analysis.status == "in_progress":
+            analysis.status = "stopped"
+            analysis.save()
+            return JsonResponse({"status": "stopped"})
+        else:
+            return JsonResponse({"status": "not_in_progress"}, status=400)
+    except Analysis.DoesNotExist:
+        print(f"Analysis not found for analysis_id: {analysis_id}")
+        return JsonResponse({"error": "Analysis not found"}, status=404)
+    except Exception as e:
+        print(f"Error in stop_analysis view: {str(e)}")
+        return JsonResponse({"error": "An unexpected error occurred"}, status=500)
 
 
 def email_confirmation_sent_view(request):

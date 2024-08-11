@@ -74,10 +74,16 @@
     }
 },
     checkAnalysisStatus() {
-        if (!this.analysisId) return;
-        fetch(`/get_analysis_status/${this.analysisId}/`)
-        .then(response => response.json())
-        .then(data => {
+    if (!this.analysisId) return;
+    fetch(`/get_analysis_status/${this.analysisId}/`)
+        .then((response) => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Failed to fetch analysis status');
+            }
+        })
+        .then((data) => {
             this.progress = data.progress;
             this.statusMessage = data.status;
             if (data.status === 'completed') {
@@ -88,19 +94,22 @@
                 this.suggestions = data.suggestions;
                 this.fetchAnalysisResults();
             } else if (data.status === 'failed' || data.status === 'stopped') {
-                this.errorMessage = data.status === 'failed' ? 'Analysis failed. Please try again.' : 'Analysis stopped.';
+                this.errorMessage =
+                    data.status === 'failed'
+                        ? 'Analysis failed. Please try again.'
+                        : 'Analysis stopped.';
                 this.analyzing = false;
                 this.crawling = false;
             } else {
                 setTimeout(() => this.checkAnalysisStatus(), 2000);
             }
         })
-        .catch(error => {
+        .catch((error) => {
             console.error('Error:', error);
             this.errorMessage = 'An error occurred while checking analysis status.';
             setTimeout(() => this.checkAnalysisStatus(), 5000); // Retry after 5 seconds
         });
-    },
+},
     fetchAnalysisResults() {
         fetch(`/analysis_results/${this.analysisId}/`)
         .then(response => response.json())

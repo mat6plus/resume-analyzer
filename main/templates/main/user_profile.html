@@ -60,16 +60,22 @@
     </form>
 
     <div class="space-y-4">
-        {% for analysis in page_obj %}
-        <div class="border-b pb-4">
-            <h3 class="font-semibold">{{ analysis.job_posting.title }} at {{ analysis.job_posting.company }}</h3>
-            <p>Match Percentage: {{ analysis.match_percentage }}%</p>
-            <p>Date: {{ analysis.created_at }}</p>
-            <a href="{% url 'main:analysis_results' analysis.job_posting.id analysis.resume.id %}" class="text-blue-500 hover:text-blue-600">View Details</a>
-        </div>
-        {% empty %}
-        <p>No analysis history available.</p>
-        {% endfor %}
+      {% for analysis in page_obj %}
+      <div class="border-b pb-4">
+        <h3 class="font-semibold">{{ analysis.job_posting.title }} at {{ analysis.job_posting.company }}</h3>
+        <p>Match Percentage: {{ analysis.match_percentage }}%</p>
+        <p>Date: {{ analysis.created_at }}</p>
+        {% if analysis.job_posting.id and analysis.resume.id %}
+        <a href="{% url 'main:analysis_results' analysis.id %}" class="text-blue-500 hover:text-blue-600">
+          View Details
+        </a>
+        {% else %}
+        <p class="text-red-500">Unable to view details. Please try again later.</p>
+        {% endif %}
+      </div>
+      {% empty %}
+      <p>No analysis history available.</p>
+      {% endfor %}
     </div>
 
     <!-- Pagination -->

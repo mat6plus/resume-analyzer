@@ -44,6 +44,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "main.middleware.AnalysisStatusMiddleware",
 ]
 
 ROOT_URLCONF = "resume_analyzer.urls"

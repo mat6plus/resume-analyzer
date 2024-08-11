@@ -109,7 +109,7 @@ def generate_cover_letter_task(analysis_id):
         job_description = analysis.job_posting.job_description
         resume_text = extract_text_from_resume(analysis.resume.file)
 
-        API_URL = "https://api-inference.huggingface.co/models/gpt2-large"  # You might want to use a more suitable model
+        API_URL = "https://api-inference.huggingface.co/models/gpt2-large"
         headers = {"Authorization": f"Bearer {settings.HUGGINGFACE_API_KEY}"}
 
         prompt = f"""
@@ -132,9 +132,7 @@ def generate_cover_letter_task(analysis_id):
         cover_letter = response.json()[0]["generated_text"]
 
         # Clean up the generated text to ensure it starts with "Dear" and ends with a signature
-        cover_letter = cover_letter.split("Dear", 1)[
-            -1
-        ]  # Remove any text before "Dear"
+        cover_letter = cover_letter.split("Dear", 1)[-1]
         cover_letter = (
             "Dear" + cover_letter.rsplit("Sincerely,", 1)[0] + "Sincerely,\n[Your Name]"
         )
@@ -151,8 +149,9 @@ def generate_cover_letter_task(analysis_id):
         analysis.save()
     except Exception as e:
         logger.error(
-            f"Error generating cover letter for analysis {analysis_id}: {str(e)}"
+            f"Unexpected error generating cover letter for analysis {analysis_id}: {str(e)}"
         )
+        logger.exception("Full traceback:")
         analysis.cover_letter = (
             "An unexpected error occurred while generating your cover letter."
         )
